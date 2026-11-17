@@ -487,18 +487,72 @@ function fit(){const st=$("stage"),sh=$("sheets");sh.style.transform="none";cons
  const k=Math.min(1,st.clientWidth/pw.offsetWidth);sh.style.transform=`scale(${k})`;st.style.height=(sh.offsetHeight*k)+"px"}
 addEventListener("resize",()=>{fit();segs()});if(document.fonts)document.fonts.ready.then(()=>{segs();render()});addEventListener("load",segs);
 
-async function collectDataFiles(path="data",seen=new Set()){
- const key=path.toLowerCase();if(seen.has(key))return [];seen.add(key);
- const url="https://api.github.com/repos/BM7770/Mishnahh-to-PDF/contents/"+path.split("/").map(encodeURIComponent).join("/")+"?ref=main";
- const response=await fetch(url,{headers:{Accept:"application/vnd.github+json"},cache:"no-store"});
- if(!response.ok)throw new Error("GitHub HTTP "+response.status+" while listing "+path);
- const items=await response.json();if(!Array.isArray(items))throw new Error("GitHub did not return a folder listing for "+path);
- const found=[];
- for(const item of items){
-  if(item.type==="dir")found.push(...await collectDataFiles(item.path,seen));
-  else if(item.type==="file"&&/\.csv$/i.test(item.name))found.push({name:item.name,path:item.path||path+"/"+item.name,url:item.download_url});
- }
- return found;
+const DATA_FILES = [
+  {"name": "Arakhin.csv", "path": "data/Arakhin.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Arakhin.csv"},
+  {"name": "Avodah_Zarah.csv", "path": "data/Avodah_Zarah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Avodah_Zarah.csv"},
+  {"name": "Bava_Batra.csv", "path": "data/Bava_Batra.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Bava_Batra.csv"},
+  {"name": "Bava_Kamma.csv", "path": "data/Bava_Kamma.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Bava_Kamma.csv"},
+  {"name": "Bava_Metzia.csv", "path": "data/Bava_Metzia.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Bava_Metzia.csv"},
+  {"name": "Beitzah.csv", "path": "data/Beitzah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Beitzah.csv"},
+  {"name": "Bekhorot.csv", "path": "data/Bekhorot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Bekhorot.csv"},
+  {"name": "Berakhot.csv", "path": "data/Berakhot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Berakhot.csv"},
+  {"name": "Bikkurim.csv", "path": "data/Bikkurim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Bikkurim.csv"},
+  {"name": "Chagigah.csv", "path": "data/Chagigah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Chagigah.csv"},
+  {"name": "Challah.csv", "path": "data/Challah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Challah.csv"},
+  {"name": "Chullin.csv", "path": "data/Chullin.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Chullin.csv"},
+  {"name": "Demai.csv", "path": "data/Demai.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Demai.csv"},
+  {"name": "Eduyot.csv", "path": "data/Eduyot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Eduyot.csv"},
+  {"name": "Eruvin.csv", "path": "data/Eruvin.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Eruvin.csv"},
+  {"name": "Gittin.csv", "path": "data/Gittin.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Gittin.csv"},
+  {"name": "Horayot.csv", "path": "data/Horayot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Horayot.csv"},
+  {"name": "Kelim.csv", "path": "data/Kelim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Kelim.csv"},
+  {"name": "Keritot.csv", "path": "data/Keritot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Keritot.csv"},
+  {"name": "Ketubot.csv", "path": "data/Ketubot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Ketubot.csv"},
+  {"name": "Kiddushin.csv", "path": "data/Kiddushin.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Kiddushin.csv"},
+  {"name": "Kilayim.csv", "path": "data/Kilayim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Kilayim.csv"},
+  {"name": "Kinnim.csv", "path": "data/Kinnim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Kinnim.csv"},
+  {"name": "Maaser_Sheni.csv", "path": "data/Maaser_Sheni.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Maaser_Sheni.csv"},
+  {"name": "Maasrot.csv", "path": "data/Maasrot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Maasrot.csv"},
+  {"name": "Makhshirin.csv", "path": "data/Makhshirin.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Makhshirin.csv"},
+  {"name": "Makkot.csv", "path": "data/Makkot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Makkot.csv"},
+  {"name": "Megillah.csv", "path": "data/Megillah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Megillah.csv"},
+  {"name": "Meilah.csv", "path": "data/Meilah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Meilah.csv"},
+  {"name": "Menachot.csv", "path": "data/Menachot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Menachot.csv"},
+  {"name": "Middot.csv", "path": "data/Middot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Middot.csv"},
+  {"name": "Mikvaot.csv", "path": "data/Mikvaot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Mikvaot.csv"},
+  {"name": "Moed_Katan.csv", "path": "data/Moed_Katan.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Moed_Katan.csv"},
+  {"name": "Nazir.csv", "path": "data/Nazir.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Nazir.csv"},
+  {"name": "Nedarim.csv", "path": "data/Nedarim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Nedarim.csv"},
+  {"name": "Negaim.csv", "path": "data/Negaim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Negaim.csv"},
+  {"name": "Niddah.csv", "path": "data/Niddah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Niddah.csv"},
+  {"name": "Oholot.csv", "path": "data/Oholot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Oholot.csv"},
+  {"name": "Oktzin.csv", "path": "data/Oktzin.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Oktzin.csv"},
+  {"name": "Orlah.csv", "path": "data/Orlah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Orlah.csv"},
+  {"name": "Parah.csv", "path": "data/Parah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Parah.csv"},
+  {"name": "Peah.csv", "path": "data/Peah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Peah.csv"},
+  {"name": "Pesachim.csv", "path": "data/Pesachim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Pesachim.csv"},
+  {"name": "Rosh_Hashanah.csv", "path": "data/Rosh_Hashanah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Rosh_Hashanah.csv"},
+  {"name": "Sanhedrin.csv", "path": "data/Sanhedrin.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Sanhedrin.csv"},
+  {"name": "Shabbat.csv", "path": "data/Shabbat.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Shabbat.csv"},
+  {"name": "Shekalim.csv", "path": "data/Shekalim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Shekalim.csv"},
+  {"name": "Sheviit.csv", "path": "data/Sheviit.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Sheviit.csv"},
+  {"name": "Shevuot.csv", "path": "data/Shevuot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Shevuot.csv"},
+  {"name": "Sotah.csv", "path": "data/Sotah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Sotah.csv"},
+  {"name": "Sukkah.csv", "path": "data/Sukkah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Sukkah.csv"},
+  {"name": "Ta'anit.csv", "path": "data/Ta'anit.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Ta%27anit.csv"},
+  {"name": "Tahorot.csv", "path": "data/Tahorot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Tahorot.csv"},
+  {"name": "Tamid.csv", "path": "data/Tamid.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Tamid.csv"},
+  {"name": "Temurah.csv", "path": "data/Temurah.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Temurah.csv"},
+  {"name": "Terumot.csv", "path": "data/Terumot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Terumot.csv"},
+  {"name": "Tevul_Yom.csv", "path": "data/Tevul_Yom.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Tevul_Yom.csv"},
+  {"name": "Yadayim.csv", "path": "data/Yadayim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Yadayim.csv"},
+  {"name": "Yevamot.csv", "path": "data/Yevamot.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Yevamot.csv"},
+  {"name": "Yoma.csv", "path": "data/Yoma.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Yoma.csv"},
+  {"name": "Zavim.csv", "path": "data/Zavim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Zavim.csv"},
+  {"name": "Zevachim.csv", "path": "data/Zevachim.csv", "url": "https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/data/Zevachim.csv"}
+];
+async function collectDataFiles(){
+ return DATA_FILES.map(file=>({...file}));
 }
 async function loadTractateFiles(){
  setTargetStatus("srcMsg","dataLoading");
@@ -561,18 +615,8 @@ function buildLexFromRows(rows){
  for(const ent of lex.entries)for(const alias of ent.aliases){const k=norm(alias);if(!k)continue;const n=k.split(" ").length;if(n>1){if(!lex.phr.has(k))lex.phr.set(k,ent);lex.maxN=Math.max(lex.maxN,n)}else if(!lex.single.has(k))lex.single.set(k,ent)}
  return lex;
 }
-async function collectBatchFiles(path="batch",seen=new Set()){
- const key=path.toLowerCase();if(seen.has(key))return [];seen.add(key);
- const url="https://api.github.com/repos/BM7770/Mishnahh-to-PDF/contents/"+path.split("/").map(encodeURIComponent).join("/")+"?ref=main";
- const response=await fetch(url,{headers:{Accept:"application/vnd.github+json"},cache:"no-store"});
- if(!response.ok)throw new Error("GitHub HTTP "+response.status+" while listing "+path);
- const items=await response.json();if(!Array.isArray(items))throw new Error("GitHub did not return a folder listing for "+path);
- const found=[];
- for(const item of items){
-  if(item.type==="dir")found.push(...await collectBatchFiles(item.path,seen));
-  else if(item.type==="file"&&/\.(csv|txt|tsv|psv)$/i.test(item.name))found.push({name:item.name,path:item.path||path+"/"+item.name,url:item.download_url});
- }
- return found;
+async function collectBatchFiles(){
+ return [{name:"batch",path:"batch",url:"https://raw.githubusercontent.com/BM7770/Mishnahh-to-PDF/main/batch"}];
 }
 async function loadBatchFileRows(files){
  const results=new Array(files.length);let next=0;
